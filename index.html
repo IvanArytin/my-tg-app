@@ -87,25 +87,28 @@
         // --- ДОКУМЕНТАЦИЯ: Запрос данных пользователя при загрузке ---
         async function fetchUserData() {
             try {
-                // Отправляем на бэкенд initData для идентификации
                 const response = await fetch(`${BACKEND_URL}/get_user_data`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ initData: tg.initData })
                 });
 
-                if (!response.ok) throw new Error('Ошибка сети или сервера.');
-
+                if (!response.ok) {
+                    // Улучшенная обработка ошибок
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Ошибка сети или сервера.');
+                }
+                
                 const userData = await response.json();
-                updateUI(userData); // Обновляем интерфейс полученными данными
-
-                // Показываем контент, скрываем загрузку
+                updateUI(userData); 
+                
                 loadingDiv.style.display = 'none';
                 appContentDiv.style.display = 'block';
 
             } catch (error) {
-                tg.showAlert(error.message);
-                loadingDiv.innerText = 'Не удалось загрузить данные.';
+                // ЗАМЕНЯЕМ tg.showAlert НА ЭТИ СТРОКИ
+                console.error("Произошла ошибка при загрузке данных:", error.message);
+                loadingDiv.innerText = 'Не удалось загрузить данные. ' + error.message;
             }
         }
 
