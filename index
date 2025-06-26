@@ -75,7 +75,7 @@
         tg.expand();
 
         // АДРЕС ВАШЕГО БЭКЕНДА (ПОЛУЧЕННЫЙ ОТ NGROK)
-        const BACKEND_URL = 'https://tricky-ideas-camp.loca.lt';
+        const BACKEND_URL = 'https://deep-maps-exist.loca.lt';
 
         // Элементы интерфейса
         const loadingDiv = document.getElementById('loading');
