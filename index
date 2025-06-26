@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Демо-Кейсы</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .header, .case, .inventory {
+            width: 100%;
+            text-align: center;
+            border: 2px solid var(--tg-theme-button-color, #007bff);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+        }
+        button:disabled {
+            background-color: var(--tg-theme-hint-color, #aaaaaa);
+            cursor: not-allowed;
+        }
+        #inventory-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        #loading { font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <div id="loading">Загрузка данных пользователя...</div>
+
+    <div id="app-content" style="display: none; width: 100%;">
+        <div class="header">
+            <h2>Ваш профиль</h2>
+            <div>Баланс: <b id="user-balance">0</b> 🪙</div>
+        </div>
+
+        <div class="case">
+            <h2>Кейс "Удачи"</h2>
+            <p>Стоимость: <b id="case-cost">50</b> 🪙</p>
+            <button id="open-case-btn" onclick="openCase()">Открыть кейс</button>
+        </div>
+
+        <div class="inventory">
+            <h3>Ваш инвентарь</h3>
+            <ul id="inventory-list">
+                <li>(пусто)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // АДРЕС ВАШЕГО БЭКЕНДА (ПОЛУЧЕННЫЙ ОТ NGROK)
+        const BACKEND_URL = 'https://tricky-ideas-camp.loca.lt';
+
+        // Элементы интерфейса
+        const loadingDiv = document.getElementById('loading');
+        const appContentDiv = document.getElementById('app-content');
+        const balanceSpan = document.getElementById('user-balance');
+        const inventoryUl = document.getElementById('inventory-list');
+        const openCaseBtn = document.getElementById('open-case-btn');
+
+        // --- ДОКУМЕНТАЦИЯ: Запрос данных пользователя при загрузке ---
+        async function fetchUserData() {
+            try {
+                // Отправляем на бэкенд initData для идентификации
+                const response = await fetch(`${BACKEND_URL}/get_user_data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData: tg.initData })
+                });
+
+                if (!response.ok) throw new Error('Ошибка сети или сервера.');
+
+                const userData = await response.json();
+                updateUI(userData); // Обновляем интерфейс полученными данными
+
+                // Показываем контент, скрываем загрузку
+                loadingDiv.style.display = 'none';
+                appContentDiv.style.display = 'block';
+
+            } catch (error) {
+                tg.showAlert(error.message);
+                loadingDiv.innerText = 'Не удалось загрузить данные.';
+            }
+        }
+
+        // --- ДОКУМЕНТАЦИЯ: Открытие кейса ---
+        async function openCase() {
+            openCaseBtn.disabled = true; // Блокируем кнопку на время запроса
+            tg.HapticFeedback.impactOccurred('light');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/open_case`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData: tg.initData })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    tg.showAlert(`Поздравляем! Вы выиграли: ${result.prize_won}`);
+                    updateUI(result.user_data); // Обновляем интерфейс новыми данными
+                } else {
+                    throw new Error(result.error || 'Произошла неизвестная ошибка.');
+                }
+
+            } catch (error) {
+                tg.showAlert(error.message);
+            } finally {
+                openCaseBtn.disabled = false; // Разблокируем кнопку
+            }
+        }
+
+        // --- ДОКУМЕНТАЦИЯ: Вспомогательная функция для обновления UI ---
+        function updateUI(data) {
+            balanceSpan.innerText = data.balance;
+            inventoryUl.innerHTML = ''; // Очищаем список
+            if (data.inventory && data.inventory.length > 0) {
+                data.inventory.forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerText = item;
+                    inventoryUl.appendChild(li);
+                });
+            } else {
+                inventoryUl.innerHTML = '<li>(пусто)</li>';
+            }
+        }
+
+        // Запускаем процесс при загрузке страницы
+        document.addEventListener('DOMContentLoaded', fetchUserData);
+    </script>
+</body>
+</html>
